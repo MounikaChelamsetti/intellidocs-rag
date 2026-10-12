@@ -1,0 +1,421 @@
+{
+  "description": "Evaluation cases for the fictional sample documents in data/sample_documents. expected_facts: every inner list is one required fact; an answer passes if it contains at least one alternative from EVERY inner list (case-insensitive substring match). expected_sources: gold (document, page) locations.",
+  "cases": [
+    {
+      "id": "direct-01",
+      "category": "direct",
+      "question": "What are the core working hours at Aurora Labs?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "10:00",
+          "10 am",
+          "10am"
+        ],
+        [
+          "15:00",
+          "3:00 pm",
+          "3 pm",
+          "3pm"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-02",
+      "category": "direct",
+      "question": "How many days of annual leave do full-time employees receive?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "27"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "direct-03",
+      "category": "direct",
+      "question": "How long is the probation period for new employees?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "90 days",
+          "90-day",
+          "90"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-04",
+      "category": "direct",
+      "question": "How much is the home office stipend?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "400"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "direct-05",
+      "category": "direct",
+      "question": "What is the maximum flight time of the Nimbus X2?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "31 minutes",
+          "31"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-06",
+      "category": "direct",
+      "question": "What is the capacity of the NB-5200 battery?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "5200"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "direct-07",
+      "category": "direct",
+      "question": "How many active members did Greenfield Public Library have in 2025?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "18,420",
+          "18420"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Greenfield_Library_Annual_Report_2025.pdf",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "id": "direct-08",
+      "category": "direct",
+      "question": "What was the library's total operating budget in 2025?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "3.2 million",
+          "3.2m"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Greenfield_Library_Annual_Report_2025.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "para-01",
+      "category": "paraphrase",
+      "question": "How much time off can staff take each year for holidays?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "27"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "para-02",
+      "category": "paraphrase",
+      "question": "How quickly must a suspected breach be flagged to the security team?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "4 hours",
+          "four hours"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 4
+        }
+      ]
+    },
+    {
+      "id": "para-03",
+      "category": "paraphrase",
+      "question": "At what wind speed should I stop flying the drone?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "38"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "para-04",
+      "category": "paraphrase",
+      "question": "When does the drone automatically fly back by itself?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "20 percent",
+          "20%",
+          "20 per"
+        ],
+        [
+          "8 seconds",
+          "eight seconds"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "para-05",
+      "category": "paraphrase",
+      "question": "What hours can I visit the library on Saturdays?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "10:00",
+          "10 am",
+          "10am"
+        ],
+        [
+          "16:00",
+          "4:00 pm",
+          "4 pm",
+          "4pm"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Greenfield_Library_Annual_Report_2025.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "multi-01",
+      "category": "multi_passage",
+      "question": "What is the maximum number of remote days per week, and how many days of annual leave do employees get?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "3 days",
+          "three days",
+          "up to 3",
+          "up to three"
+        ],
+        [
+          "27"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 3
+        },
+        {
+          "document": "Aurora_Labs_Employee_Handbook.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-02",
+      "category": "multi_passage",
+      "question": "What is the Nimbus X2's maximum flight time, and how long does a full battery charge take?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "31"
+        ],
+        [
+          "85"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 1
+        },
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-03",
+      "category": "multi_passage",
+      "question": "How many active members does the library have, and how many digital loans were recorded?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "18,420",
+          "18420"
+        ],
+        [
+          "238,000",
+          "238000"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Greenfield_Library_Annual_Report_2025.pdf",
+          "page": 1
+        },
+        {
+          "document": "Greenfield_Library_Annual_Report_2025.pdf",
+          "page": 2
+        }
+      ]
+    },
+    {
+      "id": "multi-04",
+      "category": "multi_passage",
+      "question": "What is the drone's maximum altitude, and at what battery level does Return-to-Home activate?",
+      "answerable": true,
+      "expected_facts": [
+        [
+          "120"
+        ],
+        [
+          "20 percent",
+          "20%",
+          "20 per"
+        ]
+      ],
+      "expected_sources": [
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 1
+        },
+        {
+          "document": "Nimbus_X2_Drone_Manual.pdf",
+          "page": 3
+        }
+      ]
+    },
+    {
+      "id": "absent-01",
+      "category": "unanswerable",
+      "question": "What is Aurora Labs' pension contribution rate?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "absent-02",
+      "category": "unanswerable",
+      "question": "What is the retail price of the Nimbus X2 drone?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "absent-03",
+      "category": "unanswerable",
+      "question": "Who is the head librarian of Greenfield Public Library?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "absent-04",
+      "category": "unanswerable",
+      "question": "Can the Nimbus X2 be flown safely in heavy rain?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "absent-05",
+      "category": "unanswerable",
+      "question": "What is Aurora Labs' policy on employee stock options?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "irrelevant-01",
+      "category": "irrelevant",
+      "question": "What is the capital of Australia?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "irrelevant-02",
+      "category": "irrelevant",
+      "question": "Write a short poem about the ocean.",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    },
+    {
+      "id": "irrelevant-03",
+      "category": "irrelevant",
+      "question": "What will the weather be like in Paris tomorrow?",
+      "answerable": false,
+      "expected_facts": [],
+      "expected_sources": []
+    }
+  ]
+}
