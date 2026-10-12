@@ -1,140 +1,234 @@
-# 📄 IntelliDocs — AI Document Assistant
+# IntelliDocs — AI-Powered Document Assistant
 
-A Retrieval-Augmented Generation (RAG) chatbot. Upload several PDFs, ask questions in natural language, and get
-answers **grounded in your documents** with **validated, page-level citations** and the exact source passages.
+**Ask questions about your PDFs and get document-grounded answers with page-level source citations.**
 
-> **Status honesty box**
-> * Automated tests (75) and an **offline, retrieval-only** evaluation were actually executed (results below).
-> * The live Gemini path (embeddings + generation) is implemented and unit-tested against mocked SDK clients,
->   but it has **not been run against the real Gemini API** in the environment where this project was generated (no API key or network access to Gemini there). Live answer-quality metrics are therefore **not measured** — run the live evaluation yourself (see below).
-> * No live deployment exists yet; deployment steps are provided but unverified.
+IntelliDocs is a Retrieval-Augmented Generation (RAG) application that lets users upload PDF documents, search their content semantically, and ask questions in natural language. It uses Google Gemini for embeddings and answer generation, ChromaDB for vector storage, and Streamlit for the interactive interface.
 
-## Features
-- Multi-PDF upload with type, size, page-count and magic-byte validation; duplicate detection by content hash
-- Page-aware extraction; blank pages reported; **scanned/image-only PDFs flagged as needing OCR** (not silently ignored)
-- Configurable word-based chunking (default 400 words / 60 overlap); chunks never cross page boundaries
-- Gemini embeddings (`gemini-embedding-001`) → ChromaDB (cosine) → top-k retrieval with a tunable relevance filter
-- Grounded generation (Gemini) with a strict system prompt; document text treated as untrusted data
-- **Citation validation**: every `[n]` is checked against the retrieved passages; fabricated ids are removed, or the answer is regenerated once
-- Chat history with history-aware retrieval for follow-up questions
-- Source panel: filename, real PDF page number, retrieval score, expandable passage, chunk id
-- Evaluation dashboard + reproducible evaluation harness (25 cases on fictional sample PDFs)
-- Offline **demo mode** (no key, no LLM) and mocked tests so everything except live Gemini runs anywhere
+<p align="center">
+  <a href="https://intellidocs-rag-o29aswn7basw4jmoyjgrbi.streamlit.app/"><strong>🚀 Live Demo</strong></a>
+  &nbsp; | &nbsp;
+  <a href="https://github.com/MounikaChelamsetti/intellidocs-rag"><strong>💻 GitHub Repository</strong></a>
+</p>
 
-## Architecture
-```mermaid
-flowchart LR
-  U[User] -->|PDFs| V["Validate + extract (pypdf)"]
-  V --> C[Chunk per page]
-  C --> E1[Gemini embeddings - documents]
-  E1 --> DB["(ChromaDB cosine)"]
-  U -->|question| E2[Gemini embedding - query]
-  E2 --> R[Top-k retrieval + relevance filter]
-  DB --> R
-  R -->|none relevant| N[Decline without calling the LLM]
-  R --> P["Prompt: numbered sources 1..N"]
-  P --> G[Gemini generation]
-  G --> CV[Citation validation / one regeneration]
-  CV --> A[Answer + sources + pages in UI]
-```
-More detail: [docs/architecture.md](docs/architecture.md).
+## ✨ Key Features
 
-## Project structure
-```
-app.py                    Streamlit UI
-src/                      config, errors, pdf_processor, chunker, embeddings, vector_store,
-                          retriever, prompts, citations, llm, rag_pipeline, evaluation, offline
-tests/                    pytest suite (offline; Gemini calls mocked)
-evaluation/               questions.json, run_evaluation.py, results/
-data/                     sample_documents/ (fictional PDFs) + generate_sample_documents.py
-docs/                     architecture, interview questions, resume text
-.streamlit/config.toml    theme + server settings
-```
+- **Multi-PDF Upload:** Upload multiple documents with file validation and duplicate detection.
+- **PDF Processing:** Extract text page by page and identify documents that require OCR.
+- **Configurable Chunking:** Split text into overlapping, page-aware chunks for precise source attribution.
+- **Semantic Search:** Generate Gemini embeddings and retrieve relevant passages using ChromaDB cosine similarity.
+- **Grounded Answers:** Generate responses using retrieved document passages rather than relying solely on general model knowledge.
+- **Citation Validation:** Validate source reference IDs and remove invalid citations.
+- **Source Transparency:** Display document names, PDF page numbers, retrieval scores, and source passages.
+- **Context-Aware Chat:** Use conversation history to improve retrieval for follow-up questions.
+- **Evaluation Dashboard:** Explore retrieval evaluation results and run reproducible experiments.
+- **Offline Demo Mode:** Demonstrate retrieval and extractive answers without a live Gemini API call.
 
-## Prerequisites
-Python 3.11+ (developed and tested on 3.12) and, for live use, a Gemini API key from <https://aistudio.google.com/apikey>.
+## 🛠️ Tech Stack
 
-## Installation
-```bash
-git clone <your-repo-url> intellidocs-rag && cd intellidocs-rag
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt                        # add requirements-dev.txt for tests
-cp .env.example .env                                   # then edit .env
-```
-
-## API key setup
-Put the key **only** in `.env` (git-ignored) or an environment variable:
-```
-GEMINI_API_KEY=your_real_key
-```
-On Streamlit Cloud use *App settings → Secrets* (`GEMINI_API_KEY = "..."`). The key is never logged, printed, or hardcoded.
-
-## Run locally
-```bash
-streamlit run app.py                         # live mode (needs GEMINI_API_KEY)
-INTELLIDOCS_DEMO_MODE=1 streamlit run app.py # offline demo: lexical retrieval, extractive "answers", no LLM
-```
-Try it with the PDFs in `data/sample_documents/` (all content is fictional).
-
-## How the pipeline works
-1. **Extract** – `pypdf` reads each page; text is whitespace-normalised. Empty pages are listed; if *no* page has text the file is reported as "needs OCR".
-2. **Chunk** – per page, sliding word window (size/overlap configurable in `config.py`, env vars, or the UI). Per-page chunking trades some cross-page context for **exact page citations**.
-3. **Embed** – documents use `RETRIEVAL_DOCUMENT`, queries `RETRIEVAL_QUERY` task types; batches of up to 100; 768-dim vectors, L2-normalised; retry with exponential backoff on 429/5xx.
-4. **Store** – ChromaDB collection with `hnsw:space=cosine`, one **unique in-memory collection per browser session** (no cross-session mixing; freed when the session is garbage-collected). Duplicate files (same SHA-256) are skipped *before* any embedding call.
-5. **Retrieve** – query embedding → top-k (default 5) → drop chunks below `min_relevance`. For follow-ups, the previous user question + current question is searched as well (no extra LLM call).
-6. **Generate** – sources are numbered `[1]…[N]` inside `<source>` tags (escaped so a document cannot close the tag). The system prompt: use only sources, treat them as data, cite every claim, otherwise reply with the fixed "not enough information" sentence. If nothing passes the relevance filter, the LLM is **not called** at all.
-7. **Validate** – see below.
-
-### Relevance filtering
-Chroma returns cosine *distance*; the app reports **score = 1 − distance** (cosine similarity, higher = better) and keeps chunks with `score ≥ min_relevance`. The default `0.30` is an **initial, unvalidated heuristic for Gemini embeddings**, not a universal constant: similarity scales differ between embedding models and corpora. Tune it with the sidebar slider and with the threshold sweep that `run_evaluation.py` produces. The LLM's own refusal rule is a second line of defence.
-
-### Citation validation
-`src/citations.py` parses `[1]`, `[1][2]`, `[1, 2]`; any id outside `1..N` (N = passages actually sent) is deleted. If an answer contains invalid ids, or no citation at all, the model is asked **once** to rewrite it with the valid ids; anything still invalid is stripped and a warning is shown. Page numbers are never produced by the LLM — they come from chunk metadata for the validated ids.
-Limit: validation proves a cited id *exists*, not that the passage truly *entails* the claim (that needs human review or an NLI/judge model).
-
-## Evaluation
-Run: `python evaluation/run_evaluation.py --mode offline` (no key) or `--mode live` (needs key; throttled by `--sleep`; embeddings cached in `.cache/`). Add `--experiment --chunk-sizes 50:10,400:60` for a retrieval-only chunk-size comparison.
-
-**Metric definitions** (full text in `src/evaluation.py`): *Recall@k* = fraction of gold (document, page) locations within the top-k; *Answer correctness* = every required fact group has an accepted string in the answer (rule-based, **not** human grading); *Citation correctness* = ≥1 valid cited passage lies on a gold page; *Citation coverage* = share of claim sentences with a valid citation; *Unsupported-answer rate* = share of out-of-document questions that received a substantive answer instead of a refusal.
-
-### Actual results — executed offline, retrieval-only
-Setup: `hashing-bow@1024` **lexical** embedder (not Gemini), 3 fictional PDFs / 11 pages, **25 cases** (17 answerable, 8 unanswerable/irrelevant), top_k=5, min_score=0.10, chunk 400/60, run on the build sandbox.
-
-| Metric | Value |
+| Component | Technology |
 |---|---|
-| Recall@1 / @3 / @5 (n=17) | 0.765 / 0.941 / 1.000 |
-| Mean top-1 score, answerable / unanswerable | 0.328 / 0.126 |
-| Unanswerable questions blocked by the 0.10 relevance filter | 0.50 (4 of 8) |
-| Answerable questions blocked by the filter | 0.00 |
+| Frontend | Streamlit |
+| Language | Python |
+| LLM and embeddings | Google Gemini API |
+| Vector database | ChromaDB |
+| PDF processing | pypdf |
+| Evaluation and testing | pytest, Streamlit AppTest |
+| Deployment | Streamlit Community Cloud |
 
-Chunk-size experiment (retrieval only, same embedder): 30/5 → 42 chunks, R@1 0.706; 50/10 → 29 chunks, R@1 0.765; 400/60 → 11 chunks, R@1 0.765; R@3 = 0.941 and R@5 = 1.0 for all three.
+## 🏗️ Architecture
 
-**Read this carefully:** the corpus has only 11 pages, so top-5 covers ~45% of it and Recall@5 = 1.0 is unimpressive; pages are short so chunk sizes barely differ; lexical scores say nothing about Gemini. These numbers are a regression baseline, not a claim about general performance.
+```mermaid
+flowchart TD
+    A[Upload PDF Documents] --> B[Validate and Extract Text]
+    B --> C[Split Text into Page-Aware Chunks]
+    C --> D[Generate Gemini Embeddings]
+    D --> E[(ChromaDB Vector Store)]
 
-### Not measured
-Answer correctness, citation correctness/coverage, unsupported-answer rate and Gemini retrieval quality require `--mode live` with a real key. Results will be written to `evaluation/results/live_latest.json` and appear in the app's **Evaluation** tab. Please paste them here after running.
+    F[User Question] --> G[Generate Query Embedding]
+    G --> H[Retrieve Relevant Chunks]
+    E --> H
+    H --> I{Relevant Sources Found?}
+    I -- No --> J[Return Insufficient Information]
+    I -- Yes --> K[Generate Grounded Answer]
+    K --> L[Validate Citation References]
+    L --> M[Answer with Document and Page Citations]
+```
 
-## Testing
+## 🔍 How It Works
+
+1. **Document ingestion:** Validate uploaded PDFs and extract text with page metadata.
+2. **Chunking:** Split extracted text into configurable word-based chunks without crossing page boundaries.
+3. **Embedding:** Generate document and query embeddings using Gemini.
+4. **Vector storage:** Store embeddings and metadata in a session-specific ChromaDB collection.
+5. **Retrieval:** Find the top-k relevant chunks and filter them using a configurable relevance threshold.
+6. **Answer generation:** Ask Gemini to answer using the retrieved passages and cite supporting sources.
+7. **Citation validation:** Check citation IDs against the retrieved passages and remove invalid references.
+
+When no chunks meet the relevance threshold, the application can decline to generate an answer rather than making an unsupported claim.
+
+## 🚀 Run Locally
+
+### Prerequisites
+
+- Python 3.11 or later; Python 3.12 was used during development.
+- A Gemini API key for live mode.
+
+### 1. Clone the repository
+
 ```bash
-pip install -r requirements-dev.txt
+git clone https://github.com/MounikaChelamsetti/intellidocs-rag.git
+cd intellidocs-rag
+```
+
+### 2. Create a virtual environment
+
+**Windows PowerShell**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+**macOS / Linux**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 4. Configure the API key
+
+Copy `.env.example` to `.env` and add your own Gemini API key:
+
+```dotenv
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Keep the real key in `.env` or your deployment's secret manager. **Never commit API keys to GitHub.**
+
+Get a key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+### 5. Start the application
+
+```bash
+python -m streamlit run app.py
+```
+
+Open the local URL displayed in your terminal, upload a PDF, click **Process Documents**, and ask a question.
+
+## 🌐 Live Deployment
+
+Try IntelliDocs online:
+
+**[Open the IntelliDocs Live Demo](https://intellidocs-rag-o29aswn7basw4jmoyjgrbi.streamlit.app/)**
+
+The application is hosted on Streamlit Community Cloud. The live deployment requires a valid Gemini API key configured through Streamlit Secrets.
+
+Uploaded documents and vector data are stored in memory for the active session. They may need to be uploaded again after a session ends or the application restarts.
+
+## 🧪 Testing and Evaluation
+
+Run the automated test suite:
+
+```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
-Executed in the build sandbox: **75 passed** (PDF extraction/paging/OCR flag/malformed files, chunking & overlap, metadata, duplicates, retrieval, citation validation, refusal paths, prompt-injection escaping, retries & error mapping, config, evaluation metrics, headless UI via Streamlit `AppTest`). All external calls are mocked; no key needed.
 
-## Deployment (Streamlit Community Cloud) — *not yet deployed*
-1. Push the repo to GitHub (confirm `.env` and `.streamlit/secrets.toml` are not tracked: `git ls-files | grep -E "\.env$|secrets.toml$"` should print nothing).
-2. On <https://share.streamlit.io> → *New app* → select repo, branch, main file `app.py`; in *Advanced settings* choose Python 3.11 or 3.12 and paste `GEMINI_API_KEY = "..."` into *Secrets*.
-3. Deploy. Storage is in-memory per session: data disappears on restart/session end by design (Community Cloud's disk is not guaranteed persistent). Free-tier Gemini quotas apply to all visitors; consider access control if you share the URL publicly.
-4. Caveat: the build environment could not test Community Cloud itself; if dependency resolution fails, check the build log first.
+The recorded development test run reported **75 passing tests**. The tests cover PDF processing, chunking, retrieval, citation validation, error handling, configuration, evaluation logic, and application behavior. External API calls are mocked in the automated tests.
 
-## Screenshots
-Not included (none could be captured in the build sandbox). To add them: run the app with sample PDFs, ask *"What is the maximum flight time of the Nimbus X2?"*, capture the chat with an expanded source, and save to `docs/screenshots/` then reference them here.
+### Recorded Offline Retrieval Baseline
 
-## Security notes
-Key via env/secrets only; uploads validated (extension, magic bytes, size, page cap); document text is never executed and is XML-escaped inside prompts; user-facing errors contain no stack traces; chunks are scoped to the session's collection.
+The repository includes an offline evaluation using three fictional PDFs, 11 pages, and 25 evaluation cases. This baseline uses a lexical hashing-based embedder rather than Gemini embeddings.
 
-## Limitations & future work
-No OCR; text-only (tables/figures degrade); per-page chunks lose cross-page context; no re-ranking or hybrid (BM25) search; citation validation checks existence not entailment; single-user session memory; no auth/rate limiting; evaluation corpus is tiny and synthetic; live Gemini behaviour (latency, model-name availability, safety blocks) untested by the author — model names are centralised in `src/config.py` in case they change.
+| Metric | Recorded result |
+|---|---:|
+| Recall@1 | 0.765 |
+| Recall@3 | 0.941 |
+| Recall@5 | 1.000 |
+| Unanswerable questions blocked by relevance filtering | 4 of 8 |
 
-## License
-MIT — see [LICENSE](LICENSE).
+These results describe a small offline retrieval experiment, **not the live Gemini system's answer quality**. The live system's accuracy, citation entailment, latency, and cost have not been established by these measurements.
+
+Run the offline evaluation with:
+
+```bash
+python evaluation/run_evaluation.py --mode offline
+```
+
+For the live evaluation, use:
+
+```bash
+python evaluation/run_evaluation.py --mode live
+```
+
+The live evaluation requires valid API credentials and may incur API usage.
+
+## 📁 Project Structure
+
+```text
+intellidocs-rag/
+├── app.py                         # Streamlit application
+├── src/
+│   ├── config.py                  # Configuration
+│   ├── pdf_processor.py           # PDF extraction and validation
+│   ├── chunker.py                 # Page-aware text chunking
+│   ├── embeddings.py               # Embedding generation
+│   ├── vector_store.py            # ChromaDB integration
+│   ├── retriever.py               # Semantic retrieval
+│   ├── prompts.py                 # Grounded-generation prompts
+│   ├── citations.py                # Citation validation
+│   ├── llm.py                     # Answer generation
+│   ├── rag_pipeline.py            # RAG orchestration
+│   └── evaluation.py              # Evaluation metrics
+├── data/
+│   └── sample_documents/          # Fictional example PDFs
+├── evaluation/
+│   ├── questions.json             # Evaluation cases
+│   ├── run_evaluation.py           # Evaluation runner
+│   └── results/                   # Recorded evaluation results
+├── tests/                         # Automated tests
+├── docs/                          # Architecture and project notes
+├── requirements.txt
+├── requirements-dev.txt
+└── README.md
+```
+
+## ⚠️ Limitations
+
+- Scanned PDFs require OCR, which is not currently implemented.
+- Complex tables, diagrams, and image-based content may not be extracted accurately.
+- Page-aware chunking can lose context spanning multiple pages.
+- Citation validation checks reference validity, not whether each citation logically supports its claim.
+- The evaluation dataset is small and uses fictional sample documents.
+- Session data is not designed for permanent storage.
+- Authentication, rate limiting, and production-grade access controls are not currently implemented.
+- Gemini API quotas, model availability, response latency, and answer quality depend on the configured service and require live testing.
+
+## 🔮 Future Improvements
+
+- Add OCR support for scanned documents.
+- Implement hybrid retrieval and reranking.
+- Evaluate semantic retrieval and answer quality on a larger dataset.
+- Add stronger citation entailment checks.
+- Introduce persistent storage and document management.
+- Add authentication, rate limiting, and usage monitoring.
+- Improve deployment observability and error reporting.
+
+## 🔐 Security
+
+- Store API keys in environment variables or deployment secrets.
+- Do not upload `.env` or real credentials to the repository.
+- Validate uploaded files before processing.
+- Treat document contents as untrusted input.
+- Keep document collections scoped to individual application sessions.
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
